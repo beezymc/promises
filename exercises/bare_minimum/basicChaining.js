@@ -12,6 +12,19 @@ var fs = require('fs');
 var Promise = require('bluebird');
 var request = require('needle');
 
+var pluckFirstLineFromFile = function (filePath, callback) {
+  fs.readFile(filePath, 'utf8', function (err, data) {
+    if (err) {
+      callback(err);
+    } else {
+      var firstLine = String(data).split('\n');
+      callback(null, firstLine[0]);
+    }
+  });
+};
+
+var pluckFirstLineFromFileAsync = Promise.promisify(pluckFirstLineFromFile);
+
 var getGitHubProfile = function (user, callback) {
   var url = 'https://api.github.com/users/' + user;
   var options = {
@@ -33,19 +46,6 @@ var getGitHubProfile = function (user, callback) {
 
 var getGitHubProfileAsync = Promise.promisify(getGitHubProfile);
 
-var pluckFirstLineFromFile = function (filePath, callback) {
-  fs.readFile(filePath, 'utf8', function (err, data) {
-    if (err) {
-      callback(err);
-    } else {
-      var firstLine = String(data).split('\n');
-      callback(null, firstLine[0]);
-    }
-  });
-};
-
-var pluckFirstLineFromFileAsync = Promise.promisify(pluckFirstLineFromFile);
-
 var writeJSONtoFilePath = function (filePath, text, callback) {
   fs.writeFile(filePath, text, (err) => {
     if (err) {
@@ -54,25 +54,18 @@ var writeJSONtoFilePath = function (filePath, text, callback) {
       callback(null, { text });
     }
   });
-
-  // fs.readFile(filePath, 'utf8', function (err, data) {
-  //   if (err) {
-  //     callback(err);
-  //   } else {
-  //     var firstLine = String(data).split('\n');
-  //     callback(null, firstLine[0]);
-  //   }
-  // });
 };
 
 var writeJSONtoFilePathAsync = Promise.promisify(writeJSONtoFilePath);
 
 var fetchProfileAndWriteToFile = function(readFilePath, writeFilePath) {
-  // TODO
+  //take the first line of the text in the file at the filepath, and return it
   return pluckFirstLineFromFileAsync(readFilePath)
     .then((user) => {
+      //take the username (that was in the first line) and send a get request to github for the profile.
       return getGitHubProfileAsync(user)
         .then((profile) => {
+          //turn the profile into a string and write it into a new file at the writeFilePath.
           return writeJSONtoFilePathAsync(writeFilePath, JSON.stringify(profile));
         });
     })
